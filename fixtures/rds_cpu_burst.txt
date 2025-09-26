@@ -1,0 +1,2 @@
+RDS cpuUtilization > 90% for 10m
+instance=db-prod-1 region=us-east-1

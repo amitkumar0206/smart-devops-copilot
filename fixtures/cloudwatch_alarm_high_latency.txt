@@ -1,0 +1,2 @@
+AlarmName=HighLatency-API MetricName=Latency Namespace=AWS/ApiGateway
+Threshold=10000ms Current=12000ms region=us-east-1

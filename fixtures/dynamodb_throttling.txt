@@ -1,0 +1,2 @@
+2025-09-20T10:22:12Z WARN ThrottlingException on DynamoDB PutItem
+table=orders region=us-west-2 message=Rate exceeded

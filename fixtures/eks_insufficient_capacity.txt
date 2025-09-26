@@ -1,0 +1,2 @@
+EKS scheduler: Insufficient capacity to schedule pod
+namespace=apps message=cannot schedule; nodes saturated
