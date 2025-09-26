@@ -1,6 +1,6 @@
-# Smart DevOps Copilot (Hackathon Skeleton)
+# Smart DevOps Copilot
 
-Multi-agent Python system to: **read logs → recommend fixes → generate Terraform/CLI**.
+Multi-agent Python system to: **read logs → recommend fixes → send notification to Slack**.
 
 ## Quick Start (Dev)
 ### 1) Create & activate a venv (optional)
@@ -29,15 +29,15 @@ Open the Streamlit URL it prints (usually http://localhost:8501).
 ## What’s inside
 - **Agent A**: Log reader & classifier → extracts fields and categorizes (IAM / Throttling / Timeout / Quota / Config / Scaling).
 - **Agent B**: Maps category → remediation options with rationale.
-- **Agent C**: Emits **Terraform** or **AWS CLI** snippets for the chosen option.
+- **Agent C**: Sends **Notifications** with proposed Solutions to **Slack**.
 - **Orchestrator**: Simple graph A → B → C with feedback hooks.
 
-This skeleton uses **rule-based** logic so it works offline for the demo. You can later swap to your favorite LLM framework (LangGraph, CrewAI, AutoGen) to do true multi-agent reasoning.
+This code uses **rule-based** logic so it works offline for the demo. 
 
 ## Demo flow
 1. In the UI, upload a sample log from `fixtures/` (or paste).
 2. Press **Analyze**.
-3. See: Issue classification → ranked recommendations → Terraform/CLI.
+3. See: A notification in Slack Channel
 4. Copy the snippet and validate/apply in your own environment (not part of this demo).
 
 ## Project Layout
@@ -67,4 +67,4 @@ requirements.txt
 - **Extensibility**: Add providers for Slack/Jira/Datadog in v2+. 
 
 ## License
-MIT (for hackathon use).
+MIT
