@@ -1,5 +1,6 @@
 import os
 import json
+import random
 from datetime import datetime
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
@@ -77,6 +78,40 @@ class SlackFileListener:
             message_text = event.get('text', '')
             if message_text:
                 print(f"📨 Message received from {user}: {message_text}")
+        
+        @self.app.action("create_jira")
+        def handle_create_jira(ack, body, say):
+            """Handle Create Jira Ticket button click"""
+            ack()
+            user = body["user"]["id"]
+            file_info = json.loads(body["actions"][0]["value"])
+
+
+            say(f"👉 Creating Jira ticket for file `{file_info['name']}` as requested by <@{user}>")
+            # TODO:
+            # Call the appropriate Jira API to create a ticket with the file details
+
+            # TODO: Receive the jira ticket number from the API response
+            # Simulate Jira ticket creation -- Comment after integration
+            ticket_number = f"DEVOPS-{random.randint(1000, 9999)}"
+            say(f"✅ Jira ticket {ticket_number} created for file analysis!")
+        
+        @self.app.action("find_solution")
+        def handle_find_solution(ack, body, say):
+            """Handle Find Solution button click"""
+            ack()
+            user = body["user"]["id"]
+            file_info = json.loads(body["actions"][0]["value"])
+            
+            say(f"🔍 Analyzing file `{file_info['name']}` for solutions as requested by <@{user}>")
+            say("⏳ Our AI is analyzing the content. This might take a few moments...")
+
+            # TODO: Integrate with AI service to analyze the file and find solutions
+            # Simulate analysis delay -- Remove after integration
+            say(f"✅ Analysis complete! <@{user}>, we found some potential solutions for `{file_info['name']}`.")
+            
+            # TODO: Replace with actual solutions from AI
+            say("💡 Suggested Solution: Try restarting the service or checking the configuration files.")
     
     def _process_file(self, file_info: Dict[str, Any], user: str, channel: str, say):
         """Process a file from a Slack message"""
@@ -109,11 +144,55 @@ class SlackFileListener:
             
             print(f"✅ File saved: {file_path}")
             
-            # Send acknowledgment
-            self.send_message(
-                f"📥 Received file: `{file_name}` from <@{user}>\n"
-                f"🔍 Processing the file... I'll analyze its contents shortly!",
-                channel
+            # Prepare file info for buttons
+            file_data = {
+                "id": file_id,
+                "name": file_name,
+                "type": file_type,
+                "path": str(file_path)
+            }
+            
+            # Send acknowledgment with buttons
+            self.client.chat_postMessage(
+                channel=channel,
+                text=f"📥 Received file: `{file_name}` from <@{user}>\n"
+                     f"🔍 File has been saved successfully! What would you like to do with it?",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"📥 Received file: `{file_name}` from <@{user}>\n"
+                                  f"🔍 File has been saved successfully! What would you like to do with it?"
+                        }
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "🎫 Create Jira Ticket",
+                                    "emoji": True
+                                },
+                                "value": json.dumps(file_data),
+                                "action_id": "create_jira",
+                                "style": "primary"
+                            },
+                            {
+                                "type": "button",
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "🔍 Find Solution",
+                                    "emoji": True
+                                },
+                                "value": json.dumps(file_data),
+                                "action_id": "find_solution"
+                            }
+                        ]
+                    }
+                ]
             )
             
         except Exception as e:
