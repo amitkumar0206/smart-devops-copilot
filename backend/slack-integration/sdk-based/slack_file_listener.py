@@ -95,6 +95,14 @@ class SlackFileListener:
             # Simulate Jira ticket creation -- Comment after integration
             ticket_number = f"DEVOPS-{random.randint(1000, 9999)}"
             say(f"✅ Jira ticket {ticket_number} created for file analysis!")
+            
+            # Disable the Jira button after ticket creation
+            self._disable_jira_button(
+                message_ts=body["message"]["ts"],
+                channel=body["channel"]["id"],
+                file_info=file_info,
+                ticket_number=ticket_number
+            )
         
         @self.app.action("find_solution")
         def handle_find_solution(ack, body, say):
@@ -250,6 +258,67 @@ class SlackFileListener:
             print(f"❌ Unexpected error: {str(e)}")
             return error_result
     
+    def _disable_jira_button(self, message_ts: str, channel: str, file_info: Dict[str, Any], ticket_number: str):
+        """
+        Disable the Create Jira Ticket button after ticket creation
+        """
+        try:
+            # First get the original message to preserve any other blocks
+            response = self.client.conversations_history(
+                channel=channel,
+                latest=message_ts,
+                limit=1,
+                inclusive=True
+            )
+            
+            if response["messages"]:
+                original_msg = response["messages"][0]
+                blocks = original_msg.get("blocks", [])
+                
+                # Replace the actions block with a status section and keep Find Solution button
+                new_blocks = []
+                for block in blocks:
+                    if block["type"] == "actions":
+                        # First add the status section
+                        new_blocks.append({
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": f"✅ *Jira Ticket Created:* {ticket_number}"
+                            }
+                        })
+                        # Then add a new actions block with just the Find Solution button
+                        new_blocks.append({
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "🔍 Find Solution",
+                                        "emoji": True
+                                    },
+                                    "value": json.dumps(file_info),
+                                    "action_id": "find_solution"
+                                }
+                            ]
+                        })
+                    else:
+                        new_blocks.append(block)
+                blocks = new_blocks
+                
+                # Update the message
+                self.client.chat_update(
+                    channel=channel,
+                    ts=message_ts,
+                    blocks=blocks,
+                    text=f"📥 File: {file_info['name']} - Jira ticket {ticket_number} created"
+                )
+        except SlackApiError as e:
+            print(f"Error updating message: {e.response['error']}")
+        except Exception as e:
+            print(f"Error updating message: {str(e)}")
+
     def test_connection(self) -> Dict[str, Any]:
         """Test Slack connection"""
         try:
