@@ -6,6 +6,7 @@ from backend.agents.agent_b_remediator import (
     LangGraphRemediator,
     create_remediator_from_env,
 )
+from backend.agents import agent_d_runbooksynthesizer as D
 
 # from backend.agents import agent_c_codegen as C  # Commented out as not needed currently
 
@@ -72,11 +73,13 @@ def analyze_log(text: str) -> Dict[str, Any]:
         # code = C.generate(signal, chosen_action=action)
         # logger.info("Agent C completed: Implementation code generated")
 
+        runbook = D.synthesize_runbook(text)
         return {
             "signal": signal,
             "recommendations": recommendations,
             "analysis_context": analysis_context,
             "processing_info": processing_info,
+            "runbook": runbook
             # "code": code  # Commented out as Agent C is not needed currently
         }
 
@@ -88,6 +91,7 @@ def analyze_log(text: str) -> Dict[str, Any]:
             "recommendations": [],
             "analysis_context": {"error": str(e)},
             "processing_info": {"stage": "orchestration_error", "success": False},
+            "runbook": None,
             # "code": "# Error occurred during analysis"  # Commented out
         }
 
