@@ -11,6 +11,7 @@ CATEGORIES = [
     "SCALING",
 ]
 
+
 def extract_fields(text: str) -> Dict[str, Any]:
     fields = {}
     m_region = re.search(r"(?i)region[:=]\s*([a-z0-9-]+)", text)
@@ -27,11 +28,20 @@ def extract_fields(text: str) -> Dict[str, Any]:
         fields["timeout"] = True
     if "LimitExceeded" in text or "quota" in text.lower():
         fields["quota"] = True
-    if "NoSuchBucket" in text or "InvalidParameter" in text or "not found" in text.lower():
+    if (
+        "NoSuchBucket" in text
+        or "InvalidParameter" in text
+        or "not found" in text.lower()
+    ):
         fields["config_error"] = True
-    if "Insufficient capacity" in text or "cannot schedule" in text or "desiredCount" in text:
+    if (
+        "Insufficient capacity" in text
+        or "cannot schedule" in text
+        or "desiredCount" in text
+    ):
         fields["scaling"] = True
     return fields
+
 
 def classify(text: str) -> str:
     f = extract_fields(text)
@@ -49,6 +59,7 @@ def classify(text: str) -> str:
         return "SCALING"
     return "CONFIG"
 
+
 def run(text: str) -> Dict[str, Any]:
     fields = extract_fields(text)
     category = classify(text)
@@ -58,9 +69,18 @@ def run(text: str) -> Dict[str, Any]:
         "highlights": _highlights(text),
     }
 
+
 def _highlights(text: str) -> List[str]:
     hints = []
-    for kw in ["AccessDenied", "Throttling", "Timeout", "LimitExceeded", "InvalidParameter", "504", "429"]:
+    for kw in [
+        "AccessDenied",
+        "Throttling",
+        "Timeout",
+        "LimitExceeded",
+        "InvalidParameter",
+        "504",
+        "429",
+    ]:
         if kw.lower() in text.lower():
             hints.append(kw)
     return hints
