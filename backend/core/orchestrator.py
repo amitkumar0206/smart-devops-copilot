@@ -13,7 +13,7 @@ from backend.agents import agent_d_runbooksynthesizer as D
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Initialize the enhanced Agent B remediator
+# Initialize the Agent B remediator
 try:
     remediator = create_remediator_from_env()
     logger.info("Enhanced Agent B remediator initialized successfully")
@@ -79,7 +79,7 @@ def analyze_log(text: str) -> Dict[str, Any]:
             "recommendations": recommendations,
             "analysis_context": analysis_context,
             "processing_info": processing_info,
-            "runbook": runbook
+            "runbook": runbook,
             # "code": code  # Commented out as Agent C is not needed currently
         }
 
