@@ -132,6 +132,11 @@ class SlackFileListener:
             if not all([file_id, file_name, file_url]):
                 raise ValueError("Missing required file information")
             
+            # Check if the file is a text file
+            if not file_name.lower().endswith('.txt'):
+                say(f"⚠️ Sorry <@{user}>, currently we only support `.txt` files. You uploaded: `{file_name}`")
+                return
+            
             # Create timestamp-based directory to prevent filename conflicts
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             save_dir = self.files_dir / timestamp
@@ -145,6 +150,9 @@ class SlackFileListener:
             # Get the raw download URL from the file info
             download_url = file_info_response["file"].get("url_private_download", file_url)
             
+            # For .txt files, proceed with download regardless of content-type
+            # Slack might use different content-types for text files
+
             # Download and save the file using the raw download URL
             response = requests.get(
                 download_url,
