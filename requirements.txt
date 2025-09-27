@@ -2,5 +2,9 @@ fastapi
 uvicorn
 pydantic
 python-multipart
+python-dotenv
+langchain-openai
+langsmith
+slack_bolt
 streamlit
 requests

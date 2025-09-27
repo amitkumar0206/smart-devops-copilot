@@ -24,6 +24,12 @@ uvicorn backend.core.app:app --reload --port 8000
 streamlit run ui/app.py
 ```
 
+### 5) Stop the unicorm
+```bash
+lsof -i :8000
+kill -9 PID
+```
+
 Open the Streamlit URL it prints (usually http://localhost:8501).
 
 ## What’s inside

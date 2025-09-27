@@ -1,29 +1,47 @@
 import streamlit as st
 import requests
 import os
+from dotenv import load_dotenv
+from loadConfig import read_config
 
+# Load environment variables from .env file
+load_dotenv()
+# Read configuration file if needed
+config_data = read_config()
+
+# Streamlit app configuration
 st.set_page_config(page_title="Smart DevOps Copilot", layout="centered")
 
+# App title and description
 st.title("🧠 Smart DevOps Copilot — Hackathon Demo")
 st.caption("Paste a CloudWatch/log snippet → detect issue → recommend fix → generate Terraform/CLI.")
 
+# Backend URL configuration, if missin then use localhost
 backend_url = os.environ.get("COPILOT_BACKEND_URL", "http://localhost:8000")
 
+# Form for user input
 with st.form("analyze_form"):
     text = st.text_area("Paste a log/error snippet", height=200, placeholder="Paste CloudWatch log lines here...")
     uploaded = st.file_uploader("...or upload a small .txt log", type=["txt", "log"])
     submitted = st.form_submit_button("Analyze")
+
+    # Handle form submission
     if submitted:
+        # Validate input
         if uploaded is not None:
             files = {"file": uploaded.getvalue()}
             resp = requests.post(f"{backend_url}/analyze_file", files={"file": ("log.txt", uploaded.getvalue())}, timeout=20)
+        # If text area is empty and no file uploaded, show warning
         else:
             resp = requests.post(f"{backend_url}/analyze", json={"text": text}, timeout=20)
+       
+        # Display results
         if resp.ok:
             data = resp.json()
             st.subheader("Detected Issue")
             st.json(data.get("signal", {}))
             st.subheader("Recommendations (ranked)")
+            # Display each recommendation in an expander
             for i, r in enumerate(data.get("recommendations", []), 1):
                 with st.expander(f"{i}. {r.get('title')}"):
                     st.write("**Why**")
@@ -32,6 +50,7 @@ with st.form("analyze_form"):
                     st.code(r.get("action", "N/A"), language="text")
             st.subheader("Generated Code")
             tabs = st.tabs(["Terraform", "AWS CLI"])
+            # Display generated code in tabs
             with tabs[0]:
                 st.code(data.get("code", {}).get("terraform", "# No Terraform"), language="hcl")
             with tabs[1]:
