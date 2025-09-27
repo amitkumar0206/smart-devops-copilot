@@ -46,9 +46,22 @@ class SimpleMCPSlack:
             client=WebClient(token=self.slack_token, ssl=ssl_context)
         )
         
-        # Initialize AI model (Free Grok from OpenRouter)
-        self.llm = ChatOpenAI(
-            model="x-ai/grok-beta",  # Free Grok model
+        # Initialize AI model
+        self.llm = self._initialize_llm()
+        
+        # Message handler function - will be set by user
+        self.message_handler: Optional[Callable] = None
+        
+        # Setup message listening
+        self._setup_listeners()
+        
+        print("🤖 Simple MCP Slack Bot initialized with FREE Grok model!")
+        print(f"📱 Default channel: {self.default_channel}")
+    
+    def _initialize_llm(self):
+        """Initialize AI model (Free Grok from OpenRouter)"""
+        return ChatOpenAI(
+            model="x-ai/grok-4-fast:free",  # Free Grok model
             api_key=self.openrouter_key,
             base_url="https://openrouter.ai/api/v1",
             temperature=0.7,
@@ -60,16 +73,7 @@ class SimpleMCPSlack:
                 }
             }
         )
-        
-        # Message handler function - will be set by user
-        self.message_handler: Optional[Callable] = None
-        
-        # Setup message listening
-        self._setup_listeners()
-        
-        print("🤖 Simple MCP Slack Bot initialized with FREE Grok model!")
-        print(f"📱 Default channel: {self.default_channel}")
-    
+
     def _setup_listeners(self):
         """Setup Slack message listeners"""
         
@@ -90,13 +94,16 @@ class SimpleMCPSlack:
             # Call the user-defined message handler if it exists
             if self.message_handler:
                 try:
-                    self.message_handler(
+                    response = self.message_handler(
                         message=message_text,
                         user=user,
                         channel=channel,
                         timestamp=timestamp,
                         full_event=event
                     )
+                    # If handler returns a response, send it back to Slack
+                    if response:
+                        say(response)
                 except Exception as e:
                     print(f"❌ Error in message handler: {str(e)}")
                     say(f"⚠️ Error processing your message: {str(e)}")
@@ -214,6 +221,7 @@ class SimpleMCPSlack:
         """
         self.message_handler = handler_func
         print(f"✅ Message handler registered: {handler_func.__name__}")
+        self.send_message(f"🤖 Message handler '{handler_func.__name__}' registered and active!")
     
     def test_connection(self) -> Dict[str, Any]:
         """Test Slack connection"""
@@ -261,76 +269,12 @@ class SimpleMCPSlack:
 def process_incoming_message(message: str, user: str, channel: str, timestamp: str, full_event: dict):
     """
     Custom function that gets called when any message is received
-    You can customize this to do whatever you want with incoming messages
+    Simply returns the received message without any processing
     """
-    
-    print(f"🔔 Message handler called!")
-    print(f"   User: {user}")
-    print(f"   Message: {message}")
-    print(f"   Channel: {channel}")
-    
-    # Example: Process the message based on content
-    message_lower = message.lower()
-    
-    if "hello" in message_lower or "hi" in message_lower:
-        print("   👋 Greeting detected!")
-        handle_greeting(user, message)
-    
-    elif "help" in message_lower:
-        print("   ❓ Help request detected!")
-        handle_help_request(user, message)
-    
-    elif "status" in message_lower:
-        print("   📊 Status request detected!")
-        handle_status_request(user, message)
-    
-    elif "urgent" in message_lower or "emergency" in message_lower:
-        print("   🚨 Urgent message detected!")
-        handle_urgent_message(user, message)
-    
-    # You can add your own custom logic here
-    # Example: Call other functions based on message content
-    if "deploy" in message_lower:
-        trigger_deployment(message, user)
-    elif "backup" in message_lower:
-        trigger_backup(message, user)
-    elif "restart" in message_lower:
-        trigger_restart(message, user)
+    print(f"� Message received from {user} in {channel}: {message}")
+    return message
 
-def handle_greeting(user: str, message: str):
-    """Handle greeting messages"""
-    print(f"   Processing greeting from {user}")
-    # Your greeting logic here
 
-def handle_help_request(user: str, message: str):
-    """Handle help requests"""
-    print(f"   Processing help request from {user}")
-    # Your help logic here
-
-def handle_status_request(user: str, message: str):
-    """Handle status requests"""
-    print(f"   Processing status request from {user}")
-    # Your status check logic here
-
-def handle_urgent_message(user: str, message: str):
-    """Handle urgent messages"""
-    print(f"   Processing urgent message from {user}")
-    # Your urgent message logic here
-
-def trigger_deployment(message: str, user: str):
-    """Example function that could be called from message handler"""
-    print(f"🚀 Deployment triggered by {user}: {message}")
-    # Your deployment logic here
-
-def trigger_backup(message: str, user: str):
-    """Example function that could be called from message handler"""
-    print(f"💾 Backup triggered by {user}: {message}")
-    # Your backup logic here
-
-def trigger_restart(message: str, user: str):
-    """Example function that could be called from message handler"""
-    print(f"🔄 Restart triggered by {user}: {message}")
-    # Your restart logic here
 
 def main():
     """Main function demonstrating the simple MCP integration"""

@@ -3,187 +3,75 @@ from simple_mcp_slack_integration import SimpleMCPSlack
 def my_message_processor(message: str, user: str, channel: str, timestamp: str, full_event: dict):
     """
     This function gets called every time someone sends a message in the channel
-    Customize this function to handle messages however you want
+    Returns appropriate response based on message type
     """
     print(f"📨 Processing message from {user}: {message}")
     
     # Convert message to lowercase for easier matching
     message_content = message.lower()
     
-    # Handle different types of messages
+    # Handle different types of messages and return appropriate responses
     if any(word in message_content for word in ["hello", "hi", "hey"]):
         print("   👋 Greeting message detected!")
-        handle_user_greeting(user, message)
+        return f"👋 Hello {user}! How can I help you today?"
     
     elif any(word in message_content for word in ["status", "health", "check"]):
         print("   📊 Status check requested!")
-        perform_system_check(user, message)
+        services = {
+            "Web Server": "healthy",
+            "Database": "healthy", 
+            "Cache": "warning",
+            "Queue": "healthy"
+        }
+        return f"📊 System Status:\n" + "\n".join([f"• {service}: {status}" for service, status in services.items()])
     
     elif any(word in message_content for word in ["deploy", "deployment", "release"]):
         print("   🚀 Deployment request detected!")
-        initiate_deployment(user, message)
+        deployment_steps = [
+            "Validating code changes",
+            "Building application",
+            "Running tests",
+            "Deploying to staging",
+            "Running smoke tests",
+            "Deploying to production"
+        ]
+        return f"🚀 Deployment Process:\n" + "\n".join([f"• {step}" for step in deployment_steps])
     
     elif any(word in message_content for word in ["backup", "save"]):
         print("   💾 Backup request detected!")
-        start_backup_process(user, message)
+        backup_items = ["Database", "User files", "Configuration files", "Logs"]
+        return f"💾 Backup Progress:\n" + "\n".join([f"• Backing up {item}" for item in backup_items])
     
     elif any(word in message_content for word in ["restart", "reboot"]):
         print("   🔄 Restart request detected!")
-        perform_system_restart(user, message)
+        services_to_restart = ["Web Server", "Database", "Cache", "Background Jobs"]
+        return f"🔄 Restarting Services:\n" + "\n".join([f"• Restarting {service}" for service in services_to_restart])
     
     elif any(word in message_content for word in ["help", "support"]):
         print("   ❓ Help request detected!")
-        provide_assistance(user, message)
+        available_commands = [
+            "status - Check system health",
+            "deploy - Start deployment",
+            "backup - Create system backup",
+            "restart - Restart services",
+            "test - Run system tests"
+        ]
+        return f"❓ Available Commands:\n" + "\n".join([f"• {command}" for command in available_commands])
     
     elif any(word in message_content for word in ["urgent", "emergency", "critical"]):
         print("   🚨 Urgent message detected!")
-        handle_emergency_message(user, message)
+        return f"🚨 URGENT MESSAGE received from {user}:\n{message}\nEmergency protocols activated!"
     
     elif any(word in message_content for word in ["test", "testing"]):
         print("   🧪 Test request detected!")
-        run_system_tests(user, message)
+        test_suites = ["Unit Tests", "Integration Tests", "API Tests", "Performance Tests"]
+        return f"🧪 Running Tests:\n" + "\n".join([f"• {test}: ✅ Passed" for test in test_suites])
     
     else:
         print("   💬 General message received")
-        handle_general_message(user, message)
+        return f"📝 Message received: {message}"
 
-def handle_user_greeting(user: str, message: str):
-    """Handle greeting messages"""
-    print(f"   Processing greeting from user: {user}")
-    # Add your greeting response logic here
-    # Example: Send a personalized greeting back
-    
-def perform_system_check(user: str, message: str):
-    """Handle system status check requests"""
-    print(f"   Running system check requested by: {user}")
-    # Add your system checking logic here
-    # Example: Check server health, database connectivity, etc.
-    
-    # Simulate system check
-    services = {
-        "Web Server": "healthy",
-        "Database": "healthy", 
-        "Cache": "warning",
-        "Queue": "healthy"
-    }
-    
-    print(f"   System check results: {services}")
-    # You could send results back to Slack here
 
-def initiate_deployment(user: str, message: str):
-    """Handle deployment requests"""
-    print(f"   Deployment initiated by: {user}")
-    print(f"   Deployment message: {message}")
-    
-    # Add your deployment logic here
-    # Example: Trigger CI/CD pipeline, run deployment scripts, etc.
-    
-    # Simulate deployment steps
-    deployment_steps = [
-        "Validating code changes",
-        "Building application",
-        "Running tests",
-        "Deploying to staging",
-        "Running smoke tests",
-        "Deploying to production"
-    ]
-    
-    for step in deployment_steps:
-        print(f"     - {step}")
-        # You could send progress updates to Slack here
-    
-    print("   ✅ Deployment completed!")
-
-def start_backup_process(user: str, message: str):
-    """Handle backup requests"""
-    print(f"   Backup process started by: {user}")
-    
-    # Add your backup logic here
-    # Example: Backup databases, files, configurations
-    
-    backup_items = ["Database", "User files", "Configuration files", "Logs"]
-    
-    for item in backup_items:
-        print(f"     - Backing up {item}")
-    
-    print("   ✅ Backup process completed!")
-
-def perform_system_restart(user: str, message: str):
-    """Handle restart requests"""
-    print(f"   System restart requested by: {user}")
-    
-    # Add your restart logic here
-    # Example: Restart services, clear caches, etc.
-    
-    services_to_restart = ["Web Server", "Database", "Cache", "Background Jobs"]
-    
-    for service in services_to_restart:
-        print(f"     - Restarting {service}")
-    
-    print("   ✅ System restart completed!")
-
-def provide_assistance(user: str, message: str):
-    """Handle help requests"""
-    print(f"   Providing help to: {user}")
-    
-    # Add your help logic here
-    # Example: Show available commands, documentation links, etc.
-    
-    available_commands = [
-        "status - Check system health",
-        "deploy - Start deployment",
-        "backup - Create system backup",
-        "restart - Restart services",
-        "test - Run system tests"
-    ]
-    
-    print("   Available commands:")
-    for command in available_commands:
-        print(f"     - {command}")
-
-def handle_emergency_message(user: str, message: str):
-    """Handle urgent/emergency messages"""
-    print(f"   🚨 URGENT MESSAGE from {user}: {message}")
-    
-    # Add your emergency handling logic here
-    # Example: Send alerts, escalate to on-call team, etc.
-    
-    # You might want to:
-    # - Send immediate notifications to team leads
-    # - Create incident tickets
-    # - Trigger automated responses
-    # - Log to monitoring systems
-    
-    print("   Emergency protocols activated!")
-
-def run_system_tests(user: str, message: str):
-    """Handle test requests"""
-    print(f"   Running tests requested by: {user}")
-    
-    # Add your testing logic here
-    # Example: Run unit tests, integration tests, health checks
-    
-    test_suites = ["Unit Tests", "Integration Tests", "API Tests", "Performance Tests"]
-    
-    for test_suite in test_suites:
-        print(f"     - Running {test_suite}")
-        # Simulate test results
-        print(f"     ✅ {test_suite} passed")
-    
-    print("   ✅ All tests completed successfully!")
-
-def handle_general_message(user: str, message: str):
-    """Handle general messages that don't match specific patterns"""
-    print(f"   General message from {user}: {message[:50]}...")
-    
-    # Add your general message handling logic here
-    # Example: Log message, analyze sentiment, etc.
-    
-    # You could implement features like:
-    # - Sentiment analysis
-    # - Keyword extraction
-    # - Message logging
-    # - Auto-responses for common questions
 
 def main():
     """Main function to start the Slack bot"""
