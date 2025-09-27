@@ -35,8 +35,9 @@ def analyze_log(text: str) -> Dict[str, Any]:
         # Step 1: Agent A - Analyze and classify the log
         logger.info("Starting Agent A analysis")
         signal = A.run(text)
+        signal["text"] = text  # Include original text for context
         logger.info(
-            f"Agent A completed: {signal.get('category', 'Unknown')} issue detected"
+            f"Agent A completed: Input: {text}, {signal.get('category', 'Unknown')} issue detected"
         )
 
         # Step 2: Agent B - Generate remediation recommendations

@@ -574,6 +574,21 @@ Optimize for maximum business value with minimal risk. Consider implementation d
         Returns:
             Dict containing recommendations and analysis context
         """
+        # Check if we have minimal structured data or need to analyze raw text
+        has_structured_data = (
+            signal.get("category")
+            and signal.get("category") != "UNKNOWN"
+            and signal.get("severity")
+            and signal.get("component")
+        )
+
+        # If we don't have good structured data, enhance the signal with raw text analysis
+        if not has_structured_data:
+            logger.info(
+                "Insufficient structured data detected, enhancing signal with raw text analysis"
+            )
+            signal = self._enhance_signal_from_raw_text(signal)
+
         initial_state = RemediationState(
             signal=signal,
             category=signal.get("category", "CONFIG"),
@@ -597,6 +612,7 @@ Optimize for maximum business value with minimal risk. Consider implementation d
                     "stage": final_state.get("processing_stage", "unknown"),
                     "success": final_state.get("analysis_complete", False),
                     "timestamp": datetime.now().isoformat(),
+                    "enhanced_from_raw_text": not has_structured_data,
                 },
             }
         except Exception as e:
@@ -607,8 +623,105 @@ Optimize for maximum business value with minimal risk. Consider implementation d
                     "stage": "error_fallback",
                     "success": False,
                     "timestamp": datetime.now().isoformat(),
+                    "enhanced_from_raw_text": not has_structured_data,
                 },
             }
+
+    def _enhance_signal_from_raw_text(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enhance signal data by analyzing raw text when structured data is insufficient
+
+        Args:
+            signal: Original signal with potentially incomplete structured data
+
+        Returns:
+            Enhanced signal with better categorization and extracted information
+        """
+        # Get the raw text - could be from 'text', 'error_message', or other fields
+        raw_text = (
+            signal.get("text", "")
+            or signal.get("error_message", "")
+            or signal.get("message", "")
+            or str(signal)
+        )
+        logger.info(f"Raw text for enhancement: {raw_text}")
+
+        if not raw_text or len(raw_text.strip()) < 10:
+            logger.warning("No sufficient raw text found for enhancement")
+            return signal
+
+        system_prompt = """You are an expert DevOps engineer analyzing raw log data to extract structured information.
+
+Your task is to analyze the provided raw log/error text and extract key information for DevOps remediation.
+
+IMPORTANT: Your response must be valid JSON in this exact format:
+{
+    "category": "IAM|THROTTLING|TIMEOUT|CONFIG|CAPACITY|NETWORK|STORAGE|COMPUTE",
+    "severity": "LOW|MEDIUM|HIGH|CRITICAL",
+    "component": "specific AWS service or component name",
+    "error_message": "clean, concise error description",
+    "region": "AWS region if mentioned",
+    "resource_id": "resource identifier if available",
+    "http_code": "HTTP status code if present",
+    "service_type": "AWS service type",
+    "additional_context": {
+        "timestamp": "extracted timestamp if available",
+        "request_id": "request ID if present",
+        "other_relevant_info": "any other important details"
+    }
+}
+
+Focus on extracting actionable information for DevOps troubleshooting."""
+
+        prompt = f"""Analyze this raw log/error data and extract structured information:
+
+RAW LOG DATA:
+{raw_text}
+
+Extract and categorize the key information needed for DevOps analysis and remediation."""
+
+        try:
+            response = self._call_llm(prompt, system_prompt)
+            enhanced_data = self._extract_json_from_response(response)
+
+            if enhanced_data:
+                # Merge enhanced data with original signal, preserving any existing good data
+                enhanced_signal = {**signal}  # Start with original
+
+                # Update with enhanced data, but don't overwrite good existing data
+                for key, value in enhanced_data.items():
+                    if key == "additional_context":
+                        # Merge additional context
+                        existing_context = enhanced_signal.get("additional_context", {})
+                        enhanced_signal["additional_context"] = {
+                            **existing_context,
+                            **value,
+                        }
+                    elif not enhanced_signal.get(key) or enhanced_signal.get(key) in [
+                        "UNKNOWN",
+                        "unknown",
+                        "",
+                    ]:
+                        # Only update if we don't have good existing data
+                        enhanced_signal[key] = value
+
+                # Ensure we preserve the original raw text
+                enhanced_signal["original_raw_text"] = raw_text
+
+                logger.info(
+                    f"Enhanced signal: category={enhanced_signal.get('category')}, "
+                    f"severity={enhanced_signal.get('severity')}, "
+                    f"component={enhanced_signal.get('component')}"
+                )
+
+                return enhanced_signal
+            else:
+                logger.warning("Failed to extract structured data from raw text")
+                return signal
+
+        except Exception as e:
+            logger.error(f"Error enhancing signal from raw text: {e}")
+            return signal
 
 
 # Utility functions for integration with other agents
