@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
-from backend.core.orchestrator import analyze_log, get_remediation_status
+from typing import Any, Dict
+from .orchestrator import analyze_log, get_remediation_status
 
 app = FastAPI(title="Smart DevOps Copilot")
 
@@ -8,9 +9,8 @@ app = FastAPI(title="Smart DevOps Copilot")
 class AnalyzeRequest(BaseModel):
     text: str
 
-
 @app.get("/status")
-async def get_status():
+async def get_status() -> Dict[str, Any]:
     """Get system status including remediator availability and configuration"""
     remediation_status = get_remediation_status()
     return {

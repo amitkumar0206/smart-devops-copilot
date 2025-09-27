@@ -5,6 +5,8 @@ python-multipart
 python-dotenv
 langchain-openai
 langsmith
+langgraph
+backend
 slack_bolt
 streamlit
 requests

@@ -3,7 +3,7 @@ import json
 import uuid
 import hashlib
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Any, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv

@@ -1,12 +1,9 @@
 # Orchestrator wiring A -> B -> C
 from typing import Dict, Any
 import logging
-from backend.agents import agent_a_reader as A
-from backend.agents.agent_b_remediator import (
-    LangGraphRemediator,
-    create_remediator_from_env,
-)
-from backend.agents import agent_d_runbooksynthesizer as D
+from ..agents import agent_a_reader as A
+from ..agents.agent_b_remediator import create_remediator_from_env
+from ..agents import agent_d_runbooksynthesizer as D
 
 # from backend.agents import agent_c_codegen as C  # Commented out as not needed currently
 
@@ -43,6 +40,10 @@ def analyze_log(text: str) -> Dict[str, Any]:
 
         # Step 2: Agent B - Generate remediation recommendations
         logger.info("Starting Agent B remediation")
+        from typing import List
+        recommendations: List[Dict[str, Any]] = []
+        analysis_context: Dict[str, Any] = {}
+        processing_info: Dict[str, Any] = {}
         if remediator:
             # Use enhanced LangGraph remediator (it handles fallbacks internally)
             remediation_result = remediator.get_recommendations(signal)
