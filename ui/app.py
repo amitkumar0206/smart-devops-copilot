@@ -16,8 +16,8 @@ st.set_page_config(page_title="Smart DevOps Copilot", layout="centered")
 st.title("🧠 Smart DevOps Copilot — Hackathon Demo")
 st.caption("Paste a CloudWatch/log snippet → detect issue → recommend fix → generate Terraform/CLI.")
 
-# Backend URL configuration, if missin then use localhost
-backend_url = os.environ.get("COPILOT_BACKEND_URL", "http://localhost:8000")
+# Backend URL configuration, if missing then use localhost
+backend_url = config_data.get("General", {}).get("COPILOT_BACKEND_URL", "http://localhost:8000")
 
 # Form for user input
 with st.form("analyze_form"):
