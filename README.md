@@ -14,17 +14,22 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3) Start the backend (FastAPI)
+### 3) copy .env file
+```bash
+cp dummy.env .env
+```
+
+### 4) Start the backend (FastAPI)
 ```bash
 uvicorn backend.core.app:app --reload --port 8000
 ```
 
-### 4) Start the UI (Streamlit)
+### 5) Start the UI (Streamlit)
 ```bash
 streamlit run ui/app.py
 ```
 
-### 5) Stop the unicorm
+### 6) Stop the unicorm, if Ctrl + C doesnot work
 ```bash
 lsof -i :8000
 kill -9 PID
