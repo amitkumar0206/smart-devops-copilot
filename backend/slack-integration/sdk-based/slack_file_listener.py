@@ -137,18 +137,28 @@ class SlackFileListener:
             save_dir = self.files_dir / timestamp
             save_dir.mkdir(exist_ok=True)
             
-            # Download and save the file
+            # Get file info to get the correct download URL
+            file_info_response = self.client.files_info(file=file_id)
+            if not file_info_response["ok"]:
+                raise ValueError("Could not get file information")
+            
+            # Get the raw download URL from the file info
+            download_url = file_info_response["file"].get("url_private_download", file_url)
+            
+            # Download and save the file using the raw download URL
             response = requests.get(
-                file_url,
-                headers={'Authorization': f'Bearer {self.slack_token}'},
-                stream=True
+                download_url,
+                headers={
+                    'Authorization': f'Bearer {self.slack_token}',
+                    'Accept': 'text/plain, application/octet-stream'
+                },
+                allow_redirects=True
             )
             response.raise_for_status()
             
             file_path = save_dir / file_name
             with open(file_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
+                f.write(response.content)
             
             print(f"✅ File saved: {file_path}")
             
