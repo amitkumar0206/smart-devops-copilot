@@ -146,10 +146,13 @@ def _node_remediate(state: OrchestratorState) -> OrchestratorState:
 
 
 def _node_runbook(state: OrchestratorState) -> OrchestratorState:
-    remediation = state.get("remediation", "") or ""
+    log = state.get("log", "") or ""
     recommendations = state.get("recommendations", []) or []
-    runbook = _agent_d_runbook(remediation, recommendations)
-    logger.info("Runbook synthesized (%d chars)", len(runbook or ""))
+    runbook = _agent_d_runbook(log, recommendations)
+    if runbook:
+        logger.info("Runbook synthesized: ID=%s, steps=%d", runbook.runbook_id, len(runbook.checklist))
+    else:
+        logger.warning("Runbook synthesis failed")
     return {
         **state,
         "runbook": runbook,
@@ -195,7 +198,7 @@ def tools_condition(state: OrchestratorState) -> str:
     # If category is runbook, 
     if state.get("category") == "runbook":
         logger.info("category is runbook, calling remediate next")
-        return "remediate"
+        return "runbook"
     # Otherwise, go to remediate
     logger.info(f"category is {state.get('category')}, calling remediate next")
     return "remediate"

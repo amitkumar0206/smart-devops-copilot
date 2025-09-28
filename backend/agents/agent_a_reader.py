@@ -297,7 +297,7 @@ class agent_a_reader:
         if not matched:
             matched.append(Finding(
                 ts=rec.ts,
-                category="unknown",
+                category="runbook",
                 severity="low",
                 probable_cause="Unclassified log event.",
                 remediation_hint="manual_triage",

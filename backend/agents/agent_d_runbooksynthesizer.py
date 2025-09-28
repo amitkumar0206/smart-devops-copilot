@@ -326,7 +326,7 @@ def synthesize_runbook(runbook_text: str, dry_run_enforce: bool = True, llm_mode
     - llm_model: override model name used for generation.
     Returns RunbookResult on success, or None on failure.
     """
-    logger.info("Synthesizing runbook (length=%d chars)", len(runbook_text))
+    # logger.info("Synthesizing runbook (length=%d chars)", len(runbook_text))
     llm = _init_llm(model_name=llm_model)
     if llm is None:
         logger.error("LLM initialization failed. Aborting synthesis.")
