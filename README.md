@@ -2,6 +2,9 @@
 
 Multi-agent Python system to: **read logs → recommend fixes → send notification to Slack**.
 
+## LOOM VIDEO URL
+https://www.loom.com/share/88cef8dd70f7486f88c78ee15d3159cd
+
 ## Quick Start (Dev)
 ### 1) Create & activate a venv (optional)
 ```bash
