@@ -20,6 +20,7 @@ from pathlib import Path
 
 from backend.agents import agent_a_reader
 from backend.agents.agent_b_remediator import Recommendation
+from backend.agents import agent_e_jira_creator
 
 # -----------------------------
 # Imports (defensive fallbacks)
@@ -82,6 +83,8 @@ class OrchestratorState(TypedDict, total=False):
     recommendations: List[str]
     runbook: Optional[str]
     slack_notification_status: Optional[bool]
+    jira_issue_created: Optional[bool]
+    jira_issue_key: Optional[str]
 
     # meta/debug
     analysis_context: Dict[str, Any]
@@ -211,28 +214,91 @@ def _node_notify_slack(state: OrchestratorState) -> OrchestratorState:
     return state
 
 
+def _node_create_jira_issue(state: OrchestratorState) -> OrchestratorState:
+    """Create a Jira issue using the agent_e_jira_creator with log analysis data"""
+    try:
+        # Get required data from state
+        log = state.get("log", "")
+        category = state.get("category", "General/Error")
+        remediation = state.get("remediation", "")
+        recommendations = state.get("recommendations", [])
+        processing_info = state.get("processing_info", {})
+        
+        # Prepare Jira issue data
+        issue_data = {
+            "project": "AI",  # Default project key, can be made configurable
+            "summary": f"{category}: {log[:100]}{'...' if len(log) > 100 else ''}",
+            "description": f"""
+**Original Log:**
+{log}
+
+**Category:** {category}
+
+**Remediation:**
+{remediation}
+
+**Recommendations:**
+{chr(10).join(f"- {rec}" for rec in recommendations) if recommendations else "None provided"}
+
+**Analysis Timestamp:** {datetime.now().isoformat()}
+            """.strip()
+        }
+        
+        # Create Jira issue using the connector
+        result = agent_e_jira_creator.create_jira_issue(issue_data)
+        
+        # Parse the result to extract issue key if successful
+        if "✅" in result and ":" in result:
+            # Extract issue key from success message like "✅ Jira issue created successfully: AI-123"
+            issue_key = result.split(": ")[-1] if ": " in result else None
+            state["jira_issue_created"] = True
+            state["jira_issue_key"] = issue_key
+            logger.info(f"✅ Successfully created Jira issue: {issue_key}")
+        else:
+            state["jira_issue_created"] = False
+            state["jira_issue_key"] = None
+            logger.error(f"❌ Failed to create Jira issue: {result}")
+
+    except Exception as e:
+        logger.error(f"❌ Error in Jira issue creation node: {str(e)}")
+        state["jira_issue_created"] = False
+        state["jira_issue_key"] = None
+        
+    state["processing_info"] = {
+        **processing_info,
+        "stage": "jira_issue_created",
+        "jira_timestamp": str(datetime.now())
+    }
+    
+    return state
+
+
 # ------------------
 # Graph builder API
 # ------------------
 def build_orchestrator() -> "CompiledGraph":
     """
     Returns a compiled LangGraph graph that wires:
-    START -> classify -> (conditional) remediate/runbook -> END
+    START -> classify -> (conditional) remediate/runbook -> slack_notify -> jira_create -> END
     """
     graph = StateGraph(OrchestratorState)  # type: ignore[arg-type]
     graph.add_node("classify", _node_classify)
     graph.add_node("remediate", _node_remediate)
     graph.add_node("runbook", _node_runbook)
-    graph.add_node("slack_notify", _node_notify_slack) 
+    graph.add_node("slack_notify", _node_notify_slack)
+    graph.add_node("jira_create", _node_create_jira_issue)
 
     # Conditional edge from classify
     graph.add_conditional_edges("classify", tools_condition)
 
     graph.set_entry_point("classify")
-    graph.set_finish_point("runbook")
+    graph.set_finish_point("jira_create")
 
     # Remediate always goes to slack
     graph.add_edge("remediate", "slack_notify")
+    
+    # Slack notification goes to Jira creation
+    graph.add_edge("slack_notify", "jira_create")
 
     return graph.compile()
 
@@ -274,6 +340,9 @@ def analyze_log(log: str) -> OrchestratorState:
             "remediation": "",
             "recommendations": [],
             "runbook": None,
+            "slack_notification_status": False,
+            "jira_issue_created": False,
+            "jira_issue_key": None,
             "analysis_context": {"error": str(e)},
             "processing_info": {"stage": "orchestration_error", "success": False},
         }

@@ -1,14 +1,9 @@
-
 import sys
 import os
-import importlib.util
-from langchain.agents import initialize_agent
-from langchain.chat_models import ChatOpenAI
-from langchain.tools import Tool
+import importlib.util 
 import requests
 import json
-import sys
-import importlib.util
+import re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ui')))
 spec = importlib.util.spec_from_file_location("loadConfig", os.path.join(os.path.dirname(__file__), '../../ui/loadConfig.py'))
 loadConfig = importlib.util.module_from_spec(spec)
@@ -29,6 +24,41 @@ else:
 # 1. MCP Tool (wrapper around Jira API) - simple implementation
 # ============================================================
 
+def _clean_summary(summary: str) -> str:
+    """
+    Clean the summary to remove newlines and other invalid characters for Jira.
+    Jira summary cannot contain newlines and should be a single line.
+    """
+    if not summary:
+        return "No summary provided"
+    
+    # Replace newlines with spaces and strip extra whitespace
+    cleaned = summary.replace('\n', ' ').replace('\r', ' ')
+    
+    # Remove multiple consecutive spaces
+    cleaned = ' '.join(cleaned.split())
+    
+    # Truncate if too long (Jira has a limit, typically 255 characters)
+    if len(cleaned) > 200:
+        cleaned = cleaned[:197] + "..."
+    
+    return cleaned
+
+def _clean_description(description: str) -> str:
+    """
+    Clean the description to ensure it's properly formatted for Jira.
+    """
+    if not description:
+        return "No description provided"
+    
+    # Remove excessive whitespace but preserve intentional formatting
+    cleaned = description.strip()
+    
+    # Replace multiple consecutive newlines with double newlines
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    
+    return cleaned
+
 def create_jira_issue(issue_data: dict) -> str:
     """
     Connects to Jira via MCP-like interface and creates a new issue.
@@ -41,15 +71,26 @@ def create_jira_issue(issue_data: dict) -> str:
     JIRA_EMAIL = config["General"]["jira_email"]         # Your Jira account email
 
     url = f"{JIRA_BASE_URL}/rest/api/3/issue"
+    print(url)
     headers = {
         "Content-Type": "application/json"
     }
     auth = (JIRA_EMAIL, JIRA_API_TOKEN)
-
+    print(JIRA_EMAIL)
+    print(JIRA_API_TOKEN)
+    # Clean the summary and description to remove invalid characters
+    cleaned_summary = _clean_summary(issue_data["summary"])
+    cleaned_description = _clean_description(issue_data["description"])
+    
+    print(f"Original summary: {repr(issue_data['summary'])}")
+    print(f"Cleaned summary: {repr(cleaned_summary)}")
+    print(f"Original description: {repr(issue_data['description'])}")
+    print(f"Cleaned description: {repr(cleaned_description)}")
+    
     payload = {
             "fields": {
                 "project": {"key": issue_data["project"]},
-                "summary": issue_data["summary"],
+                "summary": cleaned_summary,
                 "description": {
                     "type": "doc",
                     "version": 1,
@@ -57,16 +98,21 @@ def create_jira_issue(issue_data: dict) -> str:
                         {
                             "type": "paragraph",
                             "content": [
-                                {"type": "text", "text": issue_data["description"]}
+                                {"type": "text", "text": cleaned_description}
                             ]
                         }
                     ]
                 },
-                "issuetype": {"name": "Problem"}
+                "issuetype": {"name": "Bug"}
             }
         }
 
+    print(f"Payload being sent: {json.dumps(payload, indent=2)}")
+    
     response = requests.post(url, headers=headers, auth=auth, data=json.dumps(payload))
+    print(f"Response status: {response.status_code}")
+    print(f"Response text: {response.text}")
+    
     if response.status_code == 201:
         issue_key = response.json()["key"]
         return f"✅ Jira issue created successfully: {issue_key}"
@@ -78,11 +124,11 @@ def create_jira_issue(issue_data: dict) -> str:
 # 2. Register MCP tool for LangChain agent
 # ============================================================
 
-jira_tool = Tool(
-    name="jira.create_issue",
-    func=lambda x: create_jira_issue(_extract_json(x)),
-    description="Creates a Jira issue. Input must be a JSON string with keys: project, summary, description, priority."
-)
+# jira_tool = Tool(
+#     name="jira.create_issue",
+#     func=lambda x: create_jira_issue(_extract_json(x)),
+#     description="Creates a Jira issue. Input must be a JSON string with keys: project, summary, description, priority."
+# )
 
 # Helper to robustly extract the first JSON object from a string
 import re
@@ -99,17 +145,17 @@ def _extract_json(s):
 # 3. Setup LangChain Agent
 # ============================================================
 
-llm = ChatOpenAI(model="gpt-4o-mini",
-                openai_api_key=api_key,
-                temperature=0.3,
-                max_tokens=200,
-                base_url="https://openrouter.ai/api/v1")  # or gpt-5 if available
+# llm = ChatOpenAI(model="gpt-4o-mini",
+#                 openai_api_key=api_key,
+#                 temperature=0.3,
+#                 max_tokens=200,
+#                 base_url="https://openrouter.ai/api/v1")  # or gpt-5 if available
 
-agent = initialize_agent(
-    tools=[jira_tool],
-    llm=llm,
-    verbose=True
-)
+# agent = initialize_agent(
+#     tools=[jira_tool],
+#     llm=llm,
+#     verbose=True
+# )
 
 # ============================================================
 # 4. Example Input from Log Agent
@@ -128,5 +174,5 @@ log_issue_json = {
 # 5. Run the Agent
 # ============================================================
 
-result = agent.run(f"Create a Jira ticket with this JSON: {json.dumps(log_issue_json)}")
-print(result)
+# result = agent.run(f"Create a Jira ticket with this JSON: {json.dumps(log_issue_json)}")
+# print(result)
