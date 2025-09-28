@@ -12,6 +12,12 @@ config_data = read_config()
 # Streamlit app configuration
 st.set_page_config(page_title="Smart DevOps Copilot", layout="wide")
 
+# Initialize session state for listener
+if 'listener_initialized' not in st.session_state:
+    st.session_state.listener_initialized = False
+if 'listener_thread' not in st.session_state:
+    st.session_state.listener_thread = None
+
 # App title and description
 st.title("🧠 Smart DevOps Copilot — Enhanced AI Remediation")
 st.caption(
@@ -48,6 +54,27 @@ with st.sidebar:
     - **Rich context analysis**
     """
     )
+
+    # Slack Listener Initialization Button
+    st.header("🎧 Slack Integration")
+    button_text = "Listener initialized" if st.session_state.listener_initialized else "Initialize listener"
+    if st.button(button_text, key="listener_button"):
+        if not st.session_state.listener_initialized:
+            with st.spinner("Initializing listener..."):
+                try:
+                    resp = requests.post(f"{backend_url}/initialize-listener", timeout=10)
+                    if resp.ok:
+                        data = resp.json()
+                        if data.get("success"):
+                            st.session_state.listener_initialized = True
+                            st.success("✅ Listener initialized successfully!")
+                            st.rerun()  # Refresh to update button text
+                        else:
+                            st.error(f"❌ Failed to initialize listener: {data.get('error', 'Unknown error')}")
+                    else:
+                        st.error(f"❌ API error: {resp.status_code}")
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
 
 # Form for user input
 with st.form("analyze_form"):
