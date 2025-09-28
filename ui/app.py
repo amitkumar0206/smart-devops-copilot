@@ -143,7 +143,7 @@ with st.form("analyze_form"):
                 )
             else:
                 st.warning(
-                    f"⚠️ Analysis completed with fallbacks (Stage: {processing_info.get('stage', 'unknown')})"
+                    f"⚠️ Analysis completed (Stage: {processing_info.get('stage', 'unknown')})"
                 )
 
             # Create columns for better layout
@@ -151,27 +151,38 @@ with st.form("analyze_form"):
 
             with col1:
                 st.subheader("🔍 Detected Issue")
-                signal = data.get("signal", {})
+                signal = data.get("log", {})
 
                 # Display key signal information in a more readable format
+                # Handle case where signal might be a string instead of a dict
                 if signal:
-                    st.metric("Category", signal.get("category", "Unknown"))
-                    st.metric("Severity", signal.get("severity", "Unknown"))
-                    st.metric("Component", signal.get("component", "Unknown"))
+                    if isinstance(signal, dict):
+                        st.metric("Category", signal.get("category", "Unknown"))
+                        st.metric("Severity", signal.get("severity", "Unknown"))
+                        st.metric("Component", signal.get("component", "Unknown"))
 
-                    if signal.get("error_message"):
+                        if signal.get("error_message"):
+                            st.text_area(
+                                "Error Message",
+                                signal.get("error_message"),
+                                height=100,
+                                disabled=True,
+                            )
+
+                        # Show additional context if available
+                        additional_context = signal.get("additional_context", {})
+                        if additional_context:
+                            with st.expander("📋 Additional Context"):
+                                st.json(additional_context)
+                    else:
+                        # If signal is a string or other type, display it as raw text
                         st.text_area(
-                            "Error Message",
-                            signal.get("error_message"),
-                            height=100,
+                            "Log Content",
+                            str(signal),
+                            height=200,
                             disabled=True,
                         )
-
-                    # Show additional context if available
-                    additional_context = signal.get("additional_context", {})
-                    if additional_context:
-                        with st.expander("📋 Additional Context"):
-                            st.json(additional_context)
+                        st.info("Note: Received log data as text instead of structured format")
                 else:
                     st.error("No signal data received")
 
@@ -179,9 +190,9 @@ with st.form("analyze_form"):
                 st.subheader("🧠 Analysis Context")
                 analysis_context = data.get("analysis_context", {})
 
-                if analysis_context:
+                if analysis_context and isinstance(analysis_context, dict):
                     issue_analysis = analysis_context.get("issue_analysis", {})
-                    if issue_analysis:
+                    if issue_analysis and isinstance(issue_analysis, dict):
                         st.write(
                             "**Root Cause:**",
                             issue_analysis.get("root_cause", "Unknown"),
@@ -196,23 +207,23 @@ with st.form("analyze_form"):
                         )
 
                     technical_context = analysis_context.get("technical_context", {})
-                    if technical_context:
+                    if technical_context and isinstance(technical_context, dict):
                         with st.expander("🔧 Technical Details"):
                             aws_services = technical_context.get(
                                 "aws_services_involved", []
                             )
-                            if aws_services:
-                                st.write("**AWS Services:**", ", ".join(aws_services))
+                            if aws_services and isinstance(aws_services, list):
+                                st.write("**AWS Services:**", ", ".join(str(s) for s in aws_services))
 
                             error_patterns = technical_context.get("error_patterns", [])
-                            if error_patterns:
+                            if error_patterns and isinstance(error_patterns, list):
                                 st.write(
-                                    "**Error Patterns:**", ", ".join(error_patterns)
+                                    "**Error Patterns:**", ", ".join(str(p) for p in error_patterns)
                                 )
 
                             triggers = technical_context.get("likely_triggers", [])
-                            if triggers:
-                                st.write("**Likely Triggers:**", ", ".join(triggers))
+                            if triggers and isinstance(triggers, list):
+                                st.write("**Likely Triggers:**", ", ".join(str(t) for t in triggers))
                 else:
                     st.info("No detailed analysis context available")
 

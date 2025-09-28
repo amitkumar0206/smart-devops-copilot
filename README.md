@@ -1,9 +1,9 @@
 # Smart DevOps Copilot
 
-Multi-agent Python system to: **read logs → recommend fixes → send notification to Slack**.
+Multi-agent Python system to: **read logs → recommend fixes → send notification to Slack → create a JIRA ticket**
 
 ## LOOM VIDEO URL
-https://www.loom.com/share/88cef8dd70f7486f88c78ee15d3159cd
+https://www.loom.com/share/341a981a9e4a4c4e99676576f22213fa
 
 ## Quick Start (Dev)
 ### 1) Create & activate a venv (optional)

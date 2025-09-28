@@ -21,6 +21,7 @@ from pathlib import Path
 from backend.agents import agent_a_reader
 from backend.agents.agent_b_remediator import Recommendation
 from backend.agents import agent_e_jira_creator
+from loadConfig import read_config
 
 # -----------------------------
 # Imports (defensive fallbacks)
@@ -30,6 +31,8 @@ B = None
 C = None
 D = None
 create_remediator_from_env = None
+# Read configuration file if needed
+config_data = read_config()
 
 try:
     # Prefer relative imports (when this file is inside a package).
@@ -113,7 +116,7 @@ class Remediator:
 
 # Singleton remediator instance
 _remediator_singleton = Remediator(
-    model=os.environ.get("LLM_MODEL", "stub")
+    model=config_data.get("General", {}).get("LLM_MODEL", "stub")
 )
 
 def _agent_d_runbook(remediation: str, recommendations: List[str]) -> str:

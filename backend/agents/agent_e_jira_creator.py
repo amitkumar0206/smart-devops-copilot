@@ -66,9 +66,9 @@ def create_jira_issue(issue_data: dict) -> str:
     """
     config = read_config()
 
-    JIRA_BASE_URL = config["General"]["jira_base_url"]   # e.g. https://your-domain.atlassian.net
+    JIRA_BASE_URL = config["General"]["JIRA_BASE_URL"]   # e.g. https://your-domain.atlassian.net
     JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN") # Atlassian API token
-    JIRA_EMAIL = config["General"]["jira_email"]         # Your Jira account email
+    JIRA_EMAIL = config["General"]["JIRA_EMAIL"]         # Your Jira account email
 
     url = f"{JIRA_BASE_URL}/rest/api/3/issue"
     print(url)
