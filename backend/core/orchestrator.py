@@ -15,6 +15,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, TypedDict, Optional
 import logging
 import os
+from datetime import datetime
+from pathlib import Path
 
 from backend.agents import agent_a_reader
 from backend.agents.agent_b_remediator import Recommendation
@@ -23,6 +25,8 @@ from backend.agents.agent_b_remediator import Recommendation
 # Imports (defensive fallbacks)
 # -----------------------------
 A = None
+B = None
+C = None
 D = None
 create_remediator_from_env = None
 
@@ -30,16 +34,20 @@ try:
     # Prefer relative imports (when this file is inside a package).
     from ..agents import agent_a_reader as A  # type: ignore
     from ..agents.agent_b_remediator import create_remediator_from_env  # type: ignore
+    from ..agents import agent_c_slack as C  # type: ignore
     from ..agents import agent_d_runbooksynthesizer as D  # type: ignore
 except Exception:
     # Try absolute imports (if used as a top-level module)
     try:
         from agents import agent_a_reader as A  # type: ignore
         from agents.agent_b_remediator import create_remediator_from_env  # type: ignore
+        from agents import agent_c_slack as C  # type: ignore
         from agents import agent_d_runbooksynthesizer as D  # type: ignore
     except Exception:
         # Fall back to stubs so the graph compiles even without real agents.
         A = None
+        B = None
+        C = None
         D = None
         create_remediator_from_env = None
 
@@ -73,6 +81,7 @@ class OrchestratorState(TypedDict, total=False):
     remediation: str
     recommendations: List[str]
     runbook: Optional[str]
+    slack_notification_status: Optional[bool]
 
     # meta/debug
     analysis_context: Dict[str, Any]
@@ -162,6 +171,45 @@ def _node_runbook(state: OrchestratorState) -> OrchestratorState:
         },
     }
 
+def _node_notify_slack(state: OrchestratorState) -> OrchestratorState:
+    """Send notification to Slack using Agent C with remediation and recommendations"""
+    try:
+        # Get required data from state
+        log = state.get("log", "")
+        remediation = state.get("remediation", "")
+        recommendations = state.get("recommendations", [])
+        processing_info = state.get("processing_info", {})
+        
+        if C:
+            # Use Agent C to send the notification
+            result = C.send_slack_notification(
+                log=log,
+                remediation=remediation,
+                recommendations=recommendations
+            )
+            
+            # Update state based on the result
+            state["slack_notification_status"] = result["success"]
+            if result["success"]:
+                logger.info("✅ Successfully sent notification to Slack via Agent C")
+            else:
+                logger.error(f"❌ Failed to send Slack notification: {result.get('error', 'Unknown error')}")
+        else:
+            logger.warning("⚠️ Agent C not available, skipping Slack notification")
+            state["slack_notification_status"] = False
+
+    except Exception as e:
+        logger.error(f"❌ Error in Slack notification node: {str(e)}")
+        state["slack_notification_status"] = False
+        
+    state["processing_info"] = {
+        **processing_info,
+        "stage": "notification_sent",
+        "notification_timestamp": str(datetime.now())
+    }
+    
+    return state
+
 
 # ------------------
 # Graph builder API
@@ -175,6 +223,7 @@ def build_orchestrator() -> "CompiledGraph":
     graph.add_node("classify", _node_classify)
     graph.add_node("remediate", _node_remediate)
     graph.add_node("runbook", _node_runbook)
+    graph.add_node("slack_notify", _node_notify_slack) 
 
     # Conditional edge from classify
     graph.add_conditional_edges("classify", tools_condition)
@@ -183,7 +232,7 @@ def build_orchestrator() -> "CompiledGraph":
     graph.set_finish_point("runbook")
 
     # Remediate always goes to slack
-    #graph.add_edge("remediate", "slack")
+    graph.add_edge("remediate", "slack_notify")
 
     return graph.compile()
 
