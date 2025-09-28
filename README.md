@@ -38,12 +38,14 @@ kill -9 PID
 Open the Streamlit URL it prints (usually http://localhost:8501).
 
 ## What’s inside
-- **Agent A**: Log reader & classifier → extracts fields and categorizes (IAM / Throttling / Timeout / Quota / Config / Scaling).
+- **Agent A**: Log reader & classifier → extracts fields and categorizes (IAM / Throttling / Timeout / Quota / Config / Scaling / cookbook).
 - **Agent B**: Maps category → remediation options with rationale.
 - **Agent C**: Sends **Notifications** with proposed Solutions to **Slack**.
-- **Orchestrator**: Simple graph A → B → C with feedback hooks.
+- **Agent D**: Cookbook synthesizer, which generate user friendly checklist from json file
+- **Agent E**: Jira Ticket Creator, create a Jira ticket if user requiress it
+- **Orchestrator**: Langgraph orchestrator with complex flow as mentioned in below diagram
+![Flow Diagram](flow.png)
 
-This code uses **rule-based** logic so it works offline for the demo. 
 
 ## Demo flow
 1. In the UI, upload a sample log from `fixtures/` (or paste).
@@ -51,13 +53,16 @@ This code uses **rule-based** logic so it works offline for the demo.
 3. See: A notification in Slack Channel
 4. Copy the snippet and validate/apply in your own environment (not part of this demo).
 
+
 ## Project Layout
 ```
 backend/
   agents/
     agent_a_reader.py
     agent_b_remediator.py
-    agent_c_codegen.py
+    agent_c_slack.py
+    agent_d_runbooksynthesizer.py
+    agent_e_jira.py
   core/
     orchestrator.py
     app.py
@@ -75,7 +80,6 @@ requirements.txt
 ## Notes
 - **Safety**: Codegen avoids destructive actions. Review all outputs.
 - **Auth**: None for hackathon.
-- **Extensibility**: Add providers for Slack/Jira/Datadog in v2+. 
 
 ## License
 MIT
