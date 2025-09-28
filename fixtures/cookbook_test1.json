@@ -1,0 +1,29 @@
+"CodeBuildProjectUpload": {
+       "Type": "AWS::CodeBuild::Project",
+       "Properties": {
+         "Artifacts": {
+           "Type": "CODEPIPELINE"
+         },
+         "Description": "AWS CodeBuild Project for Chef cookbook upload",
+         "Environment": {
+           "Type": "LINUX_CONTAINER",
+           "ComputeType": "BUILD_GENERAL1_SMALL",
+           "Image": "chef/chefdk",
+           "EnvironmentVariables": [
+             {
+               "Name": "PATHTOSTARTERKIT",
+               "Value": {"Ref": "PathToStarterKit"}
+             }
+           ]
+         },
+         "Name": "Chef-Cookbook-Upload",
+         "ServiceRole": {
+           "Ref": "CodeBuildRole"
+         },
+         "Source": {
+           "Type": "CODEPIPELINE",
+           "BuildSpec": "buildspec-upload.yml"
+         },
+         "TimeoutInMinutes": 10
+       }
+     },
