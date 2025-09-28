@@ -1,5 +1,6 @@
 # Agent B: Enhanced Recommendation Engine with LangChain/LangGraph
 import json
+from logging import config
 import openai
 import os
 from typing import Dict, Any, List, Optional, TypedDict
@@ -11,12 +12,15 @@ from datetime import datetime
 import logging
 from dotenv import load_dotenv
 
+from ui import loadConfig
+
 # Load environment variables
 load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+config = loadConfig.read_config()
 
 
 class Severity(Enum):
@@ -73,9 +77,9 @@ class LangGraphRemediator:
 
     def __init__(
         self,
-        api_key: str = None,
-        base_url: str = "https://openrouter.ai/api/v1",
-        model: str = "openai/gpt-4o",
+        api_key: Optional[str] = None,
+        base_url: str = config.get("General", {}).get("OPEN_ROUTER_URL", "https://openrouter.ai/api/v1"),
+        model: str = config.get("General", {}).get("LLM_MODEL", "openai/gpt-4o"),
     ):
         """Initialize with OpenRouter API credentials"""
         # Use environment variable if api_key not provided
@@ -332,7 +336,7 @@ Generate 2-3 specific, actionable recommendations prioritized by impact and feas
         """Generate fallback recommendations when LLM fails"""
         category = signal.get("category", "CONFIG")
 
-        fallback_recs = {
+        fallback_recs: Dict[str, List[Dict[str, Any]]] = {
             "IAM": [
                 {
                     "title": "Review and update IAM permissions",
@@ -404,32 +408,31 @@ Generate 2-3 specific, actionable recommendations prioritized by impact and feas
             ],
         }
 
-        return fallback_recs.get(
-            category,
-            [
-                {
-                    "title": "Investigate and fix configuration issues",
-                    "rationale": [
-                        "Configuration problems are common causes",
-                        "Systematic review often identifies root cause",
-                    ],
-                    "action_type": "CONFIG_FIX",
-                    "risk_level": "LOW",
-                    "trade_offs": {
-                        "pros": "Addresses common issues",
-                        "cons": "May require deeper investigation",
-                    },
-                    "estimated_time": "1 hour",
-                    "priority": 1,
-                    "aws_services": ["CloudWatch", "Config"],
-                    "implementation_steps": [
-                        "1. Review configurations",
-                        "2. Compare with working state",
-                        "3. Apply corrections",
-                    ],
-                }
-            ],
-        )
+        default_recommendations: List[Dict[str, Any]] = [
+            {
+                "title": "Investigate and fix configuration issues",
+                "rationale": [
+                    "Configuration problems are common causes",
+                    "Systematic review often identifies root cause",
+                ],
+                "action_type": "CONFIG_FIX",
+                "risk_level": "LOW",
+                "trade_offs": {
+                    "pros": "Addresses common issues",
+                    "cons": "May require deeper investigation",
+                },
+                "estimated_time": "1 hour",
+                "priority": 1,
+                "aws_services": ["CloudWatch", "Config"],
+                "implementation_steps": [
+                    "1. Review configurations",
+                    "2. Compare with working state",
+                    "3. Apply corrections",
+                ],
+            }
+        ]
+
+        return fallback_recs.get(category, default_recommendations)
 
     def _prioritize_solutions(self, state: RemediationState) -> RemediationState:
         """Use LLM to refine and prioritize the recommendations"""
@@ -863,12 +866,11 @@ def format_recommendations_for_jira(
         "components": primary_rec.get("aws_services", ["cloudwatch"]),
     }
 
-
 def create_remediator_from_env() -> LangGraphRemediator:
     """Create a LangGraphRemediator instance using environment variables"""
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-    model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o")
+    api_key = config.get("General", {}).get("OPENROUTER_API_KEY")
+    base_url = config.get("General", {}).get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    model = config.get("General", {}).get("OPENROUTER_MODEL", "openai/gpt-4o")
 
     return LangGraphRemediator(api_key=api_key, base_url=base_url, model=model)
 
@@ -949,23 +951,3 @@ def run_example_analysis():
         print(f"❌ Unexpected Error: {e}")
         logger.error(f"Unexpected error during analysis: {e}")
 
-
-# Example usage and testing
-if __name__ == "__main__":
-    print("🚀 Agent B: Enhanced Recommendation Engine")
-    print("=" * 50)
-
-    # Check if API key is available
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print("⚠️  No API key found in environment variables")
-        print("\n💡 Setup Instructions:")
-        print("1. Get an API key from OpenRouter (https://openrouter.ai)")
-        print("2. Set environment variable: export OPENROUTER_API_KEY=your_key_here")
-        print("3. Or create a .env file with: OPENROUTER_API_KEY=your_key_here")
-        print("\n🔧 Optional environment variables:")
-        print("- OPENROUTER_BASE_URL (default: https://openrouter.ai/api/v1)")
-        print("- OPENROUTER_MODEL (default: openai/gpt-4o)")
-    else:
-        print("✅ API key found, running example analysis...")
-        run_example_analysis()

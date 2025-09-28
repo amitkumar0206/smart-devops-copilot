@@ -1,8 +1,8 @@
 import streamlit as st
 import requests
-import os
 from dotenv import load_dotenv
 from loadConfig import read_config
+from typing import Any, Dict
 
 # Load environment variables from .env file
 load_dotenv()
@@ -56,7 +56,7 @@ with st.form("analyze_form"):
         height=200,
         placeholder="Paste CloudWatch log lines here...",
     )
-    uploaded = st.file_uploader("...or upload a small .txt log", type=["txt", "log"])
+    uploaded = st.file_uploader("...or upload a small .txt/.log or a cookbook .json file", type=["txt", "log", "json"])
     submitted = st.form_submit_button("Analyze")
 
     # Handle form submission
@@ -195,34 +195,42 @@ with st.form("analyze_form"):
 
             if recommendations:
                 for i, rec in enumerate(recommendations, 1):
-                    # Create a more detailed recommendation display
-                    with st.expander(
-                        f"🔧 Solution {i}: {rec.get('title', 'Untitled')}",
-                        expanded=(i == 1),
-                    ):
+                    if isinstance(rec, dict):
+                        title = rec.get('title', 'Untitled')
+                    else:
+                        title = str(rec) if rec else 'Untitled'
+                    with st.expander(f"🔧 Solution {i}: {title}", expanded=(i == 1)):
                         rec_col1, rec_col2 = st.columns([2, 1])
 
                         with rec_col1:
-                            # Rationale
-                            rationale = rec.get("rationale", [])
+                            if isinstance(rec, dict):
+                                rationale = rec.get("rationale", [])
+                                steps = rec.get("implementation_steps", [])
+                            else:
+                                rationale = []
+                                steps = []
                             if rationale:
                                 st.write("**Why this helps:**")
                                 for reason in rationale:
-                                    st.write(f"• {reason}")
-
-                            # Implementation steps
-                            steps = rec.get("implementation_steps", [])
+                                    st.write(reason)
                             if steps:
-                                st.write("**Implementation Steps:**")
+                                st.write("**Implementation steps:**")
                                 for step in steps:
-                                    st.write(f"{step}")
+                                    st.write(step)
 
                         with rec_col2:
                             # Metadata
-                            st.metric("Priority", rec.get("priority", "N/A"))
-                            st.metric("Risk Level", rec.get("risk_level", "Unknown"))
+                            rec_dict: Dict[str, Any] = {}
+                            if isinstance(rec, dict):
+                                rec_dict = rec
+                                priority = rec_dict.get("priority", "N/A")
+                                priority = rec_dict.get("priority", "N/A")
+
+                            st.metric("Priority", str(priority))
+                            st.metric("Priority", rec_dict.get("priority", "N/A"))
+                            st.metric("Risk Level", rec_dict.get("risk_level", "Unknown"))
                             st.metric(
-                                "Estimated Time", rec.get("estimated_time", "Unknown")
+                                "Estimated Time", rec_dict.get("estimated_time", "Unknown")
                             )
 
                             # Action type

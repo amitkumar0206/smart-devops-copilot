@@ -10,3 +10,4 @@ backend
 slack_bolt
 streamlit
 requests
+boto3
