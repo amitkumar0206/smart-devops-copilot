@@ -1,6 +1,5 @@
 import os
 import json
-import random
 from datetime import datetime
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
@@ -90,7 +89,7 @@ class SlackFileListener:
             message_text = event.get('text', '')
             if message_text:
                 print(f"📨 Message received from {user}: {message_text}")
-        
+
         @self.app.action("create_jira")
         def handle_create_jira(ack, body, say):
             """Handle Create Jira Ticket button click"""
@@ -116,6 +115,7 @@ class SlackFileListener:
                 ticket_number=ticket_number
             )
         
+
         @self.app.action("find_solution")
         def handle_find_solution(ack, body, say):
             """Handle Find Solution button click"""
@@ -274,17 +274,6 @@ class SlackFileListener:
                                 "type": "button",
                                 "text": {
                                     "type": "plain_text",
-                                    "text": "🎫 Create Jira Ticket",
-                                    "emoji": True
-                                },
-                                "value": json.dumps(file_data),
-                                "action_id": "create_jira",
-                                "style": "primary"
-                            },
-                            {
-                                "type": "button",
-                                "text": {
-                                    "type": "plain_text",
                                     "text": "🔍 Find Solution",
                                     "emoji": True
                                 },
@@ -350,7 +339,6 @@ class SlackFileListener:
             }
             print(f"❌ Unexpected error: {str(e)}")
             return error_result
-    
     def _disable_jira_button(self, message_ts: str, channel: str, file_info: Dict[str, Any], ticket_number: str):
         """
         Disable the Create Jira Ticket button after ticket creation
