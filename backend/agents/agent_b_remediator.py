@@ -539,7 +539,9 @@ Optimize for maximum business value with minimal risk. Consider implementation d
                         "implementation_steps", ["Review and implement"]
                     ),
                 )
-                formatted_recs.append(asdict(recommendation))
+                rec_dict = asdict(recommendation)
+                rec_dict['action'] = rec_dict['action'].value  # Convert enum to string for JSON serialization
+                formatted_recs.append(rec_dict)
             except Exception as e:
                 # Fallback for malformed recommendations
                 fallback_rec = Recommendation(
@@ -560,7 +562,9 @@ Optimize for maximum business value with minimal risk. Consider implementation d
                         "3. Monitor results",
                     ],
                 )
-                formatted_recs.append(asdict(fallback_rec))
+                fallback_rec_dict = asdict(fallback_rec)
+                fallback_rec_dict['action'] = fallback_rec_dict['action'].value  # Convert enum to string for JSON serialization
+                formatted_recs.append(fallback_rec_dict)
 
         state["recommendations"] = formatted_recs
         state["analysis_complete"] = True
@@ -950,4 +954,3 @@ def run_example_analysis():
     except Exception as e:
         print(f"❌ Unexpected Error: {e}")
         logger.error(f"Unexpected error during analysis: {e}")
-

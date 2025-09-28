@@ -13,6 +13,18 @@ import certifi
 import requests
 from pathlib import Path
 
+# Import orchestrator for log analysis
+from backend.core.orchestrator import analyze_log
+
+# Import formatting function from agent_c_slack
+try:
+    from backend.agents.agent_c_slack import format_slack_message
+except ImportError:
+    # Fallback formatting if import fails
+    def format_slack_message(log: str, remediation: str, recommendations) -> str:
+        message = f"📊 *Category:* {log}\n\n🔧 *Remediation:* {remediation}\n\n💡 *Recommendations:* {recommendations}"
+        return message
+
 # Load environment variables
 load_dotenv()
 
@@ -110,16 +122,79 @@ class SlackFileListener:
             ack()
             user = body["user"]["id"]
             file_info = json.loads(body["actions"][0]["value"])
-            
+
             say(f"🔍 Analyzing file `{file_info['name']}` for solutions as requested by <@{user}>")
             say("⏳ Our AI is analyzing the content. This might take a few moments...")
 
-            # TODO: Integrate with AI service to analyze the file and find solutions
-            # Simulate analysis delay -- Remove after integration
-            say(f"✅ Analysis complete! <@{user}>, we found some potential solutions for `{file_info['name']}`.")
-            
-            # TODO: Replace with actual solutions from AI
-            say("💡 Suggested Solution: Try restarting the service or checking the configuration files.")
+            try:
+                # Read the file content
+                file_path = file_info.get("path")
+                if not file_path:
+                    say(f"❌ Error: File path not found for `{file_info['name']}`")
+                    return
+
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                if not content.strip():
+                    say(f"❌ Error: File `{file_info['name']}` is empty")
+                    return
+
+                # Call orchestrator analyze_log function
+                analysis_result = analyze_log(content)
+
+                # Format and send the analysis results using the proper formatting function
+                category = analysis_result.get("category", "Unknown")
+                remediation = analysis_result.get("remediation", "")
+                recommendations = analysis_result.get("recommendations", [])
+
+                # Use the agent_c_slack formatting function for proper display
+                formatted_message = format_slack_message(content, remediation, recommendations)
+
+                # Add header and category info
+                response_text = f"✅ Analysis complete! <@{user}>, here's what I found for `{file_info['name']}`:\n\n"
+                response_text += f"📊 *Category:* {category}\n\n"
+                response_text += formatted_message
+
+                say(response_text)
+
+            except FileNotFoundError:
+                say(f"❌ Error: File `{file_info['name']}` not found")
+            except UnicodeDecodeError:
+                say(f"❌ Error: Unable to read file `{file_info['name']}` (encoding issue)")
+            except Exception as e:
+                say(f"❌ Error analyzing file `{file_info['name']}`: {str(e)}")
+                print(f"Error in handle_find_solution: {str(e)}")
+
+        @self.app.action("create_jira_from_notification")
+        def handle_create_jira_from_notification(ack, body, say):
+            """Handle Create Jira Ticket button click from notification"""
+            ack()
+            user = body["user"]["id"]
+            issue_data = json.loads(body["actions"][0]["value"])
+
+            say(f"👉 Creating Jira ticket for DevOps issue as requested by <@{user}>")
+
+            # Import orchestrator here to avoid circular imports
+            try:
+                from backend.core.orchestrator import sendJiraTicket
+
+                # Call the orchestrator's sendJiraTicket function
+                result = sendJiraTicket(
+                    log=issue_data.get("log", ""),
+                    remediation=issue_data.get("remediation", ""),
+                    recommendations=issue_data.get("recommendations", [])
+                )
+
+                if result.get("success"):
+                    ticket_id = result.get("ticket_id", "Unknown")
+                    say(f"✅ Jira ticket {ticket_id} created successfully!")
+                else:
+                    say(f"❌ Failed to create Jira ticket: {result.get('message', 'Unknown error')}")
+
+            except Exception as e:
+                say(f"❌ Error creating Jira ticket: {str(e)}")
+                print(f"Error in handle_create_jira_from_notification: {str(e)}")
     
     def _process_file(self, file_info: Dict[str, Any], user: str, channel: str, say):
         """Process a file from a Slack message"""
