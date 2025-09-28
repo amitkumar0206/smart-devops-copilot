@@ -72,7 +72,7 @@ DEFAULT_RULES: List[Rule] = [
          "retry_with_backoff_or_scale", 0.9, None),
 
     # HTTP 5xx
-    Rule("http_5xx", re.compile(r"\b(5\d{2})\b.*\b(error|server error|bad gateway|gateway timeout|internal server error)\b", re.I),
+    Rule("http_5xx", re.compile(r"\b(5\d{2})\b.*\b(errors|error|server error|bad gateway|gateway timeout|internal server error)\b", re.I),
          "http_5xx", "high",
          "Backend error surfaced as HTTP 5xx.",
          "check_dependency_and_scale", 0.85, None),
