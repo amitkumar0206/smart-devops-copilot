@@ -5,6 +5,10 @@ Multi-agent Python system to: **read logs → recommend fixes → send notificat
 ## LOOM VIDEO URL
 https://www.loom.com/share/341a981a9e4a4c4e99676576f22213fa
 
+## Credit
+If you use this code, please credit:
+Amit Kumar — smart-devops-copilot ([https://github.com/<your-username>/<your-project>](https://github.com/amitkumar0206/smart-devops-copilot))
+
 ## Quick Start (Dev)
 ### 1) Create & activate a venv (optional)
 ```bash
